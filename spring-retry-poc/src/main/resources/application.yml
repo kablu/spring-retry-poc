@@ -1,0 +1,22 @@
+spring:
+    datasource:
+        password: admin
+        url: jdbc:postgresql://localhost:5432/hrms
+        username: admin
+    jpa:
+        hibernate:
+            ddl-auto: update
+            
+resilience4j:  retry:    instances:      productService:
+        max-attempts: 3
+        wait-duration: 90000
+        retryExceptions:
+                - org.springframework.web.client.HttpServerErrorException
+                - java.io.IOException
+management:  health:    circuitbreakers:      enabled: true 
+  endpoint:    health:      enabled: true
+      show-details: always                 retries:      enabled: true
+       
+      
+
+ 
