@@ -1,8 +1,11 @@
 package com.example.demo.controller;
 
+import java.net.ConnectException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +24,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.demo.RestService;
 import com.example.demo.entity.Tutorial;
 import com.example.demo.repo.TutorialRepository;
 
+import io.github.resilience4j.retry.IntervalFunction;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import io.github.resilience4j.retry.annotation.Retry;
 
 
@@ -38,6 +45,9 @@ public class TutorialController {
 	
 	@Autowired
 	TutorialRepository tutorialRepository;
+	
+	@Autowired
+	RestService restService;
 
 	@Bean
 	public RestTemplate restTemplate() {
@@ -49,6 +59,69 @@ public class TutorialController {
 	public ResponseEntity<String> getProduct() {
 		log.info("product service called at:" + attempts++);
 		String response = restTemplate().getForObject("http://localhost:8082/v1/product/1", String.class);
+		return new ResponseEntity<String>(response, HttpStatus.OK);
+		
+	}
+	
+	@GetMapping("/resiliencecDemo")
+	public ResponseEntity<String> getProductDetails() {
+		log.info("getProductDetails service called at:" + attempts++);
+		
+		RetryConfig retryConfig = RetryConfig
+									.custom()
+									.maxAttempts(2)
+									.waitDuration(Duration.ofSeconds(2))
+									//.intervalFunction(IntervalFunction.ofExponentialBackoff(200, 2))
+									.retryOnResult(b -> b.toString().contains("I"))
+									.retryOnException(e -> e instanceof RuntimeException)
+									.failAfterMaxAttempts(true)
+									//.retryExceptions(ConnectException.class)
+									//.retryOnResult((s) -> s != null)
+									.build();
+		
+		RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
+		
+		io.github.resilience4j.retry.Retry retry = retryRegistry.retry("restService", retryConfig);
+		
+		//String executeSupplier = retry.executeSupplier(() -> restTemplate().getForObject("http://localhost:8082/v1/product/1", String.class));
+		String test = restService.test(retry);
+		//Supplier<String> supp = () -> restTemplate().getForObject("http://localhost:8082/v1/product/1", String.class);
+		
+		//Supplier<String> decorateSupplier = io.github.resilience4j.retry.Retry.decorateSupplier(retry, supp);
+		
+		String response = test;
+		
+		log.info("response:" + response);
+		return new ResponseEntity<String>(response, HttpStatus.OK);
+		
+	}
+	
+	@GetMapping("/intervalFunction")
+	public ResponseEntity<String> intervalFunction() {
+		log.info("getProductDetails service called at:" + attempts++);
+		
+		RetryConfig retryConfig = RetryConfig
+				.custom()
+				.maxAttempts(2)
+				//.waitDuration(Duration.ofSeconds(2))
+				.intervalBiFunction(null)
+				.failAfterMaxAttempts(true)
+				.retryOnResult(b -> b.toString().contains("I"))
+
+				//.retryOnException(e -> e instanceof RuntimeException)
+				//.failAfterMaxAttempts(true)
+				//.retryExceptions(ConnectException.class)
+				//.retryOnResult((s) -> s != null)
+				.build();
+
+		RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
+
+		io.github.resilience4j.retry.Retry retry = retryRegistry.retry("testIntervalFunction", retryConfig);
+		
+		String response = restService.testIntervalFunction(retry);
+		
+		log.info("response:" + response);
+		
 		return new ResponseEntity<String>(response, HttpStatus.OK);
 		
 	}
