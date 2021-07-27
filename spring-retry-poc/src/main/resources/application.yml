@@ -7,15 +7,36 @@ spring:
         hibernate:
             ddl-auto: update
             
-resilience4j:  retry:    instances:      productService:
-        max-attempts: 3
-        wait-duration: 90000
-        retryExceptions:
-                - org.springframework.web.client.HttpServerErrorException
-                - java.io.IOException
-management:  health:    circuitbreakers:      enabled: true 
-  endpoint:    health:      enabled: true
-      show-details: always                 retries:      enabled: true
+
+                         
+resilience4j.timelimiter:    instances:     
+     PRODUCTSERVICE:
+        timeout-duration: 2s
+        cancel-running-future: true
+resilience4j.retry:
+    instances:
+      PRODUCTSERVICE:
+        max-attempts: 4
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        exponential-max-wait-duration: 500ms          
+        #ignore-exceptions:         # - java.util.concurrent.TimeoutException
+        retry-exceptions:          - java.net.SocketException
+          - java.net.ConnectException
+          - java.util.concurrent.TimeoutException
+          - java.lang.RuntimeException
+
+        
+        
+          
+
+logging:  level:    '[io.github.resilience4j.timelimiter,io.github.resilience4j.retry]': DEBUG
+debug: false
+      
+
+
+          
        
       
 

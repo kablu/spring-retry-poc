@@ -5,6 +5,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -55,13 +57,54 @@ public class TutorialController {
 	}
 	
 	@GetMapping("/product")
-	@Retry(name = "PRODUCTSERVICE", fallbackMethod = "fallbackRetry")
 	public ResponseEntity<String> getProduct() {
 		log.info("product service called at:" + attempts++);
-		String response = restTemplate().getForObject("http://localhost:8082/v1/product/1", String.class);
+		String response = restService.testRetrywithYml();
 		return new ResponseEntity<String>(response, HttpStatus.OK);
 		
 	}
+	
+	@GetMapping("/productTime")
+	public CompletableFuture<String> productTime() throws InterruptedException, ExecutionException {
+		log.info("productTime service called at:" + attempts++);
+		CompletableFuture<String> response = restService.futreTime();
+		return CompletableFuture.completedFuture("Test");
+		
+	}
+	
+
+    @GetMapping("/tl")
+    public CompletableFuture<String> timeLimiter() {
+    	log.info("tl..");
+    	CompletableFuture<String> str = null;
+        try {
+        	str =  restService.timeLimiter();
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+		}
+        
+        return str;
+    }
+    
+    @GetMapping("/tlClient")
+    public CompletableFuture<String> tlClient() {
+        return restService.timeLimiter();
+    }
+    
+	/*
+	 * @GetMapping("/tlStr") public String timeLimiterString() { return
+	 * restService.timeLimiterString(); }
+	 */
+	
+	@GetMapping("/bulkHeadApi")
+	public String bulkHeadApi() throws InterruptedException, ExecutionException {
+		log.info("productTime service called at:" + attempts++);
+		String response = restService.getProductBulkHead();
+		return response;
+		
+	}
+	
 	
 	@GetMapping("/resiliencecDemo")
 	public ResponseEntity<String> getProductDetails() {
@@ -69,8 +112,8 @@ public class TutorialController {
 		
 		RetryConfig retryConfig = RetryConfig
 									.custom()
-									.maxAttempts(2)
-									.waitDuration(Duration.ofSeconds(2))
+									.maxAttempts(5)
+									.waitDuration(Duration.ofMillis(500))
 									//.intervalFunction(IntervalFunction.ofExponentialBackoff(200, 2))
 									.retryOnResult(b -> b.toString().contains("I"))
 									.retryOnException(e -> e instanceof RuntimeException)
@@ -103,8 +146,8 @@ public class TutorialController {
 		RetryConfig retryConfig = RetryConfig
 				.custom()
 				.maxAttempts(2)
-				//.waitDuration(Duration.ofSeconds(2))
-				.intervalBiFunction(null)
+				.waitDuration(Duration.ofSeconds(2))
+				//.intervalBiFunction(2)
 				.failAfterMaxAttempts(true)
 				.retryOnResult(b -> b.toString().contains("I"))
 
@@ -126,11 +169,11 @@ public class TutorialController {
 		
 	}
 	
-	public ResponseEntity<String> fallbackRetry(Exception e) {
-		attempts = 1;
-		return new ResponseEntity<String>("Product Service Is Down", HttpStatus.OK);
-	}
-	
+	/*
+	 * public ResponseEntity<String> fallbackRetry(Exception e) { attempts = 1;
+	 * return new ResponseEntity<String>("Product Service Is Down", HttpStatus.OK);
+	 * }
+	 */
 	@GetMapping("/tutorials")
 	public ResponseEntity<List<Tutorial>> getAllTutorials(@RequestParam(required = false) String title) {
 		try {
