@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 
 
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 
@@ -61,18 +62,15 @@ public class RestService {
 		String response = null;
 		log.info("testRetrywithYml attempts:" + attempts++);
 		response = restTemplate.getForObject("http://localhost:8082/v1/product/1", String.class);
-		
 		return response;
 	}
 	
-	public String fallbackRetry(Throwable ex) {
-		
+	public String fallbackRetry(Throwable ex) {	
 		log.info("fallbackRetry attempts:" + attempts++);
 		return new String("Product Service Is Down");
 	}
 	
 	public String fallbackRetry(RuntimeException ex) {
-		
 		log.info("fallbackRetry attempts:" + attempts++);
 		return new String("Product Service Is Down");
 	}
@@ -85,42 +83,30 @@ public class RestService {
 		return completedFuture;
 	}
 	
+	 
 	 @Retry(name = "PRODUCTSERVICE", fallbackMethod = "fallbackProdService")
 	 @TimeLimiter(name = "PRODUCTSERVICE")
 	    public CompletableFuture<String> timeLimiter() {
 	        return CompletableFuture.supplyAsync(this::timeLimiterRemoteCall);
 	    }
 	 
-	
-	 
-		/*
-		 * @TimeLimiter(name = "TIMELIMITER", fallbackMethod = "fallbackTimeLimiter")
-		 * public String timeLimiterString() { return "OK"; }
-		 */
-	 
-	 
-	   public CompletableFuture<String> fallbackProdService(Throwable ex) {
-			
+	   public CompletableFuture<String> fallbackProdService(Throwable ex) {		
 			log.info("Retry Fallback:" + attempts++);
 			return CompletableFuture.completedFuture("Retry Fallback");
 		}
 	   
-	   public CompletableFuture<String> fallbackTimeLimiter(Throwable ex) {
-			
+	   public CompletableFuture<String> fallbackTimeLimiter(Throwable ex) {			
 			log.info("fallbackTimeLimiter:" + attempts++);
 			return CompletableFuture.completedFuture("TimeLimiter Fallback");
 		}
-		
-	   
 		private String timeLimiterRemoteCall() {
-
 			log.info("timeLimiterRemoteCall..");
 			String response = null;
-			//response = restTemplate.getForObject("http://localhost:8082/v1/product/1", String.class);
+			response = restTemplate.getForObject("http://localhost:8082/v1/product/1", String.class);
 			// Thread.sleep(3000);
 
 			//log.info("response:" + response);
-			response = doException();
+			//response = doException();
 			return response;
 		}
 		
@@ -132,13 +118,31 @@ public class RestService {
 	
 	public CompletableFuture<String> fallbackRetryWithCompletion(RuntimeException ex) {
 		
-		log.info("fallbackRetryWithCompletion attempts:" + attempts++);
-		
+		log.info("fallbackRetryWithCompletion attempts:" + attempts++);	
 		CompletableFuture<String> str = CompletableFuture.completedFuture("Futre service is down");
 		return str;
 	}
 	
+	/*
+	 * @TimeLimiter(name = "TIMELIMITER", fallbackMethod = "fallbackTimeLimiter")
+	 * public String timeLimiterString() { return "OK"; }
+	 */
 	
+	 	@RateLimiter(name = "PRODUCTSERVICERATEL", fallbackMethod = "rateLimiterFallback")
+	    public String rateLimiter() {
+	        return rateLimiterRemoteCall();
+	    }
+	 	
+	 	public String rateLimiterFallback(Throwable ex) {		
+				log.info("RateLimiter Fallback:" + attempts++);
+				return "RateLimiter Fallback";
+		}
+	 
+	 	private String rateLimiterRemoteCall() {
+			log.info("rateLimiterRemoteCall..");
+			return "OK";
+		}
+	 
 	@Bulkhead(name = "productBulkHeadService", fallbackMethod = "getDefault")
     public String getProductBulkHead(){
 		

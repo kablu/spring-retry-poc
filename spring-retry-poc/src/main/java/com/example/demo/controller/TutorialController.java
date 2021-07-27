@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -44,6 +46,8 @@ public class TutorialController {
 	Logger log = LoggerFactory.getLogger(TutorialController.class);
 	
 	int attempts = 0;
+	
+	ExecutorService service = Executors.newFixedThreadPool(5);
 	
 	@Autowired
 	TutorialRepository tutorialRepository;
@@ -86,6 +90,41 @@ public class TutorialController {
         
         return str;
     }
+    
+	@GetMapping("/rl")
+	public String esignListTasks() throws Exception {
+
+		log.info("inside rate limiter");
+		
+		service.execute(() -> {
+			try {
+				System.out.println(restService.rateLimiter());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+
+		service.execute(() -> {
+			try {
+				System.out.println(restService.rateLimiter());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+
+		service.execute(() -> {
+			try {
+				System.out.println(restService.rateLimiter());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+
+		service.shutdown();
+
+		return "Tasks sent for excution";
+
+	}
     
     @GetMapping("/tlClient")
     public CompletableFuture<String> tlClient() {

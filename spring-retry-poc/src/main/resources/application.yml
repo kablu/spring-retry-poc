@@ -8,7 +8,11 @@ spring:
             ddl-auto: update
             
 
-                         
+resilience4j.ratelimiter:    instances:
+     PRODUCTSERVICERATEL:
+       limit-refresh-period: 5s
+       limit-for-period: 2
+       timeout-duration: 1500ms                             
 resilience4j.timelimiter:    instances:     
      PRODUCTSERVICE:
         timeout-duration: 2s
