@@ -31,10 +31,6 @@ resilience4j.retry:
           - java.util.concurrent.TimeoutException
           - java.lang.RuntimeException
 
-        
-        
-          
-
 logging:  level:    '[io.github.resilience4j.timelimiter,io.github.resilience4j.retry]': DEBUG
 debug: false
       
